@@ -6,9 +6,28 @@ export type ServiceType = "Photography" | "VideoRecording" | "BlurayPackage" | "
 export const updateSelectedServices = (
     previouslySelectedServices: ServiceType[],
     action: { type: "Select" | "Deselect"; service: ServiceType }
-) => [];
+) => 
+{
+    if(action.type === "Select" && 
+    !previouslySelectedServices.find(s => s === action.service)
+    && isApplicable(previouslySelectedServices, action.service))
+    {
+        return [
+            ...previouslySelectedServices,
+            action.service
+        ]
+    }
+    else if(action.type === "Deselect")
+    {
+        let store = previouslySelectedServices.filter(s => s!==action.service);
+        
+        return removeRelatedServices(store);
+    }
+    else
+        return previouslySelectedServices;
+};
 
-export const calculatePrice = (selectedServices: ServiceType[], selectedYear: ServiceYear) =>
+export const calculatePrice = (selectedServices: ServiceType[], selectedYear: ServiceYear) : { basePrice: number, finalPrice: number } =>
 {
     // checks if we have values to calculate
     if (selectedServices == null || selectedServices.length == 0)
@@ -93,4 +112,14 @@ const isApplicable = (services: ServiceType[], service: ServiceType) : boolean =
         return false;
 
     return true;
+}
+
+const removeRelatedServices = (store: ServiceType[]): ServiceType[] =>
+{
+    let newStore: ServiceType[] = [...store];
+    if(!newStore.find(s => s==="VideoRecording"))
+        newStore = store.filter(s => s!== "BlurayPackage");
+    if(!store.find(s => s === "Photography" || s==="VideoRecording"))
+        newStore = newStore.filter(s => s !=="TwoDayEvent");
+    return newStore;
 }
