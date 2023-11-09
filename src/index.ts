@@ -17,6 +17,44 @@ export const calculatePrice = (selectedServices: ServiceType[], selectedYear: Se
     let basePrice = calculateFullPrice(selectedServices, selectedYear, selectedServices);
     let finalPrice = 0;
 
+    // list that stores services that were already calculated
+    let calculatedPriceItems : ServiceType[] = [];
+
+    selectedServices.forEach(selectedService => 
+    {
+        if (!calculatedPriceItems.find(i => i===selectedService)){
+
+            // gets all discounts defined for this service
+            let discountList = GetDiscounts(selectedYear, selectedService);
+
+            let currentPrice = calculateFullPrice( [selectedService ], selectedYear, selectedServices);
+            let biggestDiscount = 0;
+
+            discountList.forEach(discount =>
+            {
+                // checks if discount can be applied
+                if (meetsRequirements(selectedServices, discount.requires))
+                {
+                    var fullPrice = calculateFullPrice(discount.appliesTo, selectedYear, selectedServices);
+                    var currentDiscount = fullPrice - discount.price;
+                    
+                    // check if this discount is bigger than what we have
+                    if (biggestDiscount <=  currentDiscount)
+                    {
+                        biggestDiscount = currentDiscount;
+                        currentPrice = discount.price;
+
+                        // add services that are affected by this discount to list that holds calculated items
+                        calculatedPriceItems = calculatedPriceItems.concat(discount.appliesTo);
+                    }
+
+                }
+            });
+
+            finalPrice += currentPrice;
+        }
+        });
+        
     return { basePrice, finalPrice };
 }
 
@@ -32,6 +70,19 @@ const calculateFullPrice = (servicesToCalculate: ServiceType[], year: ServiceYea
     });
 
     return fullPrice;
+}
+
+// cheks if items requiredServices are present in Services selected by the user
+const meetsRequirements = (services: ServiceType[], requiredServices: ServiceType[]) : boolean =>
+{
+    let meetsRequirements = true;
+    requiredServices.forEach(requiredService =>
+    {
+        if (!services.find(s => s===requiredService))
+            meetsRequirements = false;
+    });
+
+    return meetsRequirements;
 }
 
 const isApplicable = (services: ServiceType[], service: ServiceType) : boolean =>
