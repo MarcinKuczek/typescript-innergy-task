@@ -9,22 +9,16 @@ export const updateSelectedServices = (
 ) => 
 {
     if(action.type === "Select" && 
-    !previouslySelectedServices.find(s => s === action.service)
-    && isApplicable(previouslySelectedServices, action.service))
-    {
-        return [
-            ...previouslySelectedServices,
-            action.service
-        ]
-    }
+    // checks if selected service is not already in the array
+    !previouslySelectedServices.find(s => s === action.service) &&
+    // checks if it's one of the related services and has a parent service in the array
+    isApplicable(previouslySelectedServices, action.service))
+        //  creates new array with copied values from the oryginal one plus added a new service
+        return [ ...previouslySelectedServices, action.service ]
     else if(action.type === "Deselect")
-    {
-        let store = previouslySelectedServices.filter(s => s!==action.service);
-        
-        return removeRelatedServices(store);
-    }
-    else
-        return previouslySelectedServices;
+        // first we filter out deselected service
+        // then we check if there are no related services left and if so - removes them
+        return removeRelatedServices(previouslySelectedServices.filter(s => s!==action.service));
 };
 
 export const calculatePrice = (selectedServices: ServiceType[], selectedYear: ServiceYear) : { basePrice: number, finalPrice: number } =>
