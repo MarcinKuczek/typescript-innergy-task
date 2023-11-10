@@ -8,21 +8,38 @@ export const updateSelectedServices = (
     action: { type: "Select" | "Deselect"; service: ServiceType }
 ) => 
 {
-    if(action.type === "Select" && 
-        // checks if selected service is not already in the array
-        !previouslySelectedServices.find(s => s === action.service) &&
-        // checks if it's one of the related services and has a parent service in the array
-        isApplicable(previouslySelectedServices, action.service, false))
-            //  creates new array with copied values from the oryginal one plus added a new service
-            return [ ...previouslySelectedServices, action.service ]
-
-    else if(action.type === "Deselect")
+    switch(action.type){
+        case "Select":{
+            // checks if selected service is not already in the array
+            // checks if it's one of the related services and has a parent service in the array
+            if(!previouslySelectedServices.find(s => s === action.service) &&
+                isApplicable(previouslySelectedServices, action.service, false))
+                return [ ...previouslySelectedServices, action.service ];
+            else
+                return previouslySelectedServices;
+        }
+        case "Deselect":
             // first we filter out deselected service
             // then we check if there are no related services left and if so - removes them
             return removeUnparentedServices(previouslySelectedServices.filter(s => s!==action.service));
 
-    else
-        return previouslySelectedServices;
+        default: return previouslySelectedServices;
+    }
+    // if(action.type === "Select" && 
+    //     // checks if selected service is not already in the array
+    //     !previouslySelectedServices.find(s => s === action.service) &&
+    //     // checks if it's one of the related services and has a parent service in the array
+    //     isApplicable(previouslySelectedServices, action.service, false))
+    //         //  creates new array with copied values from the oryginal one plus added a new service
+    //         return [ ...previouslySelectedServices, action.service ];
+
+    // else if(action.type === "Deselect")
+    //         // first we filter out deselected service
+    //         // then we check if there are no related services left and if so - removes them
+    //         return removeUnparentedServices(previouslySelectedServices.filter(s => s!==action.service));
+
+    // else
+    //     return previouslySelectedServices;
 };
 
 export const calculatePrice = (selectedServices: ServiceType[], selectedYear: ServiceYear) : { basePrice: number, finalPrice: number } =>
