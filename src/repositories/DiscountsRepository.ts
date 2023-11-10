@@ -1,8 +1,7 @@
 import { Discount } from "../models/Discount";
 
-// Simulates discounts saved in the database
-// This is designed to make rules maintanable in the future 
-export const DiscountsRepository: Discount[] =
+// Simulates rules for discounts saved in the database
+export const discountsRepository: Discount[] =
         [
             // rule: wedding session costs regularly $600, but in a package with photography during the wedding or with a video recording it costs $300,
             new Discount(2020, 300, [ "WeddingSession", "Photography"], [ "WeddingSession" ] ),

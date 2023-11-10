@@ -1,4 +1,4 @@
-import { GetDiscounts, GetFullPrice } from "./services/PriceService";
+import { getConnectedMainServices, getDiscounts, getFullPrice, getRelatedServices, isMainService } from "./services/priceService";
 
 export type ServiceYear = 2020 | 2021 | 2022;
 export type ServiceType = "Photography" | "VideoRecording" | "BlurayPackage" | "TwoDayEvent" | "WeddingSession";
@@ -9,16 +9,20 @@ export const updateSelectedServices = (
 ) => 
 {
     if(action.type === "Select" && 
-    // checks if selected service is not already in the array
-    !previouslySelectedServices.find(s => s === action.service) &&
-    // checks if it's one of the related services and has a parent service in the array
-    isApplicable(previouslySelectedServices, action.service))
-        //  creates new array with copied values from the oryginal one plus added a new service
-        return [ ...previouslySelectedServices, action.service ]
+        // checks if selected service is not already in the array
+        !previouslySelectedServices.find(s => s === action.service) &&
+        // checks if it's one of the related services and has a parent service in the array
+        isApplicable(previouslySelectedServices, action.service, false))
+            //  creates new array with copied values from the oryginal one plus added a new service
+            return [ ...previouslySelectedServices, action.service ]
+
     else if(action.type === "Deselect")
-        // first we filter out deselected service
-        // then we check if there are no related services left and if so - removes them
-        return removeRelatedServices(previouslySelectedServices.filter(s => s!==action.service));
+            // first we filter out deselected service
+            // then we check if there are no related services left and if so - removes them
+            return removeUnparentedServices(previouslySelectedServices.filter(s => s!==action.service));
+
+    else
+        return previouslySelectedServices;
 };
 
 export const calculatePrice = (selectedServices: ServiceType[], selectedYear: ServiceYear) : { basePrice: number, finalPrice: number } =>
@@ -38,15 +42,15 @@ export const calculatePrice = (selectedServices: ServiceType[], selectedYear: Se
         if (!calculatedPriceItems.find(i => i===selectedService)){
 
             // gets all discounts defined for this service
-            let discountList = GetDiscounts(selectedYear, selectedService);
+            let discountList = getDiscounts(selectedService, selectedYear);
 
             let currentPrice = calculateFullPrice( [selectedService ], selectedYear, selectedServices);
             let biggestDiscount = 0;
 
             discountList.forEach(discount =>
             {
-                // checks if discount can be applied
-                if (meetsRequirements(selectedServices, discount.requires))
+                // checks if discount can be applied - all required services are selected by user
+                if (containsAll(selectedServices, discount.requires))
                 {
                     var fullPrice = calculateFullPrice(discount.appliesTo, selectedYear, selectedServices);
                     var currentDiscount = fullPrice - discount.price;
@@ -72,48 +76,68 @@ export const calculatePrice = (selectedServices: ServiceType[], selectedYear: Se
 }
 
 
-const calculateFullPrice = (servicesToCalculate: ServiceType[], year: ServiceYear, selectedServicesList: ServiceType[]) : number =>
+const calculateFullPrice = (servicesToCalculate: ServiceType[], year: ServiceYear, selectedServices: ServiceType[]) : number =>
 {
     let fullPrice = 0;
     servicesToCalculate.forEach(service =>
     {
-        // checks if there are no limitations for this service to add it to full Price
-        if (isApplicable(selectedServicesList, service))
-            fullPrice += GetFullPrice(service, year);
+        // checks if this is one of the related services and selectedServices contains it's parent
+        if (isApplicable(selectedServices, service, true))
+            fullPrice += getFullPrice(service, year);
     });
 
     return fullPrice;
 }
 
-// cheks if items requiredServices are present in Services selected by the user
-const meetsRequirements = (services: ServiceType[], requiredServices: ServiceType[]) : boolean =>
+// cheks if all requiredServices are present in Services array
+const containsAll = (services: ServiceType[], requiredServices: ServiceType[]) : boolean =>
 {
-    let meetsRequirements = true;
+    let contains = true;
     requiredServices.forEach(requiredService =>
     {
-        if (!services.find(s => s===requiredService))
-            meetsRequirements = false;
+        if (!services.find(s => s === requiredService))
+            contains = false;
     });
 
-    return meetsRequirements;
+    return contains;
 }
 
-const isApplicable = (services: ServiceType[], service: ServiceType) : boolean =>
+// cheks if at least one of the requiredServices is present in Services array
+const containsOne = (services: ServiceType[], requiredServices: ServiceType[]) : boolean =>
 {
-    if (service === "BlurayPackage" && !services.find(s=> s === "VideoRecording"))
-        return false;
-    if (service === "TwoDayEvent" && !(services.find(s=> s==="VideoRecording") || services.find(s=> s === "Photography")))
-        return false;
+    let contains = false;
+    requiredServices.forEach(requiredService =>
+    {
+        if (services.find(s => s === requiredService))
+            contains = true;
+    });
 
-    return true;
+    return contains;
 }
 
-const removeRelatedServices = (store: ServiceType[]): ServiceType[] =>
+const isApplicable = (selectedServices: ServiceType[], service: ServiceType, containsAllElements: boolean) : boolean =>
+{
+    if(isMainService(service))
+        return true;
+
+    let connectedServices = getConnectedMainServices(service);
+    
+    if(containsAllElements)
+        return containsAll(selectedServices, connectedServices);
+
+    return containsOne(selectedServices, connectedServices);
+}
+
+const removeUnparentedServices = (store: ServiceType[]): ServiceType[] =>
 {
     let newStore: ServiceType[] = [...store];
-    if(!newStore.find(s => s==="VideoRecording"))
-        newStore = store.filter(s => s!== "BlurayPackage");
-    if(!store.find(s => s === "Photography" || s==="VideoRecording"))
-        newStore = newStore.filter(s => s !=="TwoDayEvent");
+    let reletedServices = getRelatedServices();
+
+    reletedServices.forEach(service => 
+    {
+        // checks if this related service has at least one parrent in the store
+        if(!containsOne(newStore, service.connectedTo))
+            newStore = newStore.filter(s => s !== service.type);
+    });
     return newStore;
 }

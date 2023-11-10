@@ -1,25 +1,52 @@
 import { ServiceType, ServiceYear } from "..";
 import { Discount } from "../models/Discount";
-import { DiscountsRepository } from "../repositories/DiscountsRepository";
-import { PricesRepository } from "../repositories/PricesRepository";
+import { PhotoService } from "../models/PhotoService";
+import { discountsRepository } from "../repositories/discountsRepository";
+import { pricesRepository, servicesRepository } from "../repositories/pricesRepository";
 
-export const GetFullPrice = (selectedService: ServiceType, year: ServiceYear) : number =>
+export const getFullPrice = (service: ServiceType, year: ServiceYear) : number =>
 {
-    let pricing = PricesRepository.find(p => p.year == year);
+    let pricingItem = pricesRepository.find(p => p.year === year && p.photoService.type === service);
 
-    switch (selectedService)
-    {
-        case "Photography": return pricing.photography;
-        case "VideoRecording": return pricing.videoRecording;
-        case "WeddingSession": return pricing.weddingSession;
-        case "BlurayPackage": return pricing.blurayPackage;
-        case "TwoDayEvent": return pricing.twoDayEvent;
+    if(pricingItem)
+        return pricingItem.price;
 
-        default: return 0;
-    }
+    return 0;
 }
 
-export const GetDiscounts=(year: ServiceYear, selectedService: ServiceType ) : Discount[] =>
+export const getDiscounts = (service: ServiceType, year: ServiceYear ) : Discount[] =>
 {
-    return DiscountsRepository.filter(p => p.year === year && p.appliesTo.find(a => a ===selectedService));
+    return discountsRepository.filter(discount => discount.year === year && discount.appliesTo.find(a => a === service));
+}
+
+export const isMainService = (service: ServiceType ) : boolean =>
+{
+    let serviceItem = servicesRepository.find(photoService => photoService.type === service);
+    if(serviceItem)
+        return serviceItem.isMainService;
+
+    return false;
+}
+
+export const getConnectedMainServices = (service: ServiceType ) : ServiceType[] =>
+{
+    let serviceItem = servicesRepository.find(photoService => photoService.type === service);
+    if(serviceItem)
+        return serviceItem.connectedTo;
+
+    return [];
+}
+
+export const getConnectedRelatedServices = (service: ServiceType ) : ServiceType[] =>
+{
+    let serviceItem = servicesRepository.find(photoService => photoService.type === service);
+    if(serviceItem)
+        return serviceItem.connectedTo;
+
+    return [];
+}
+
+export const getRelatedServices = () : PhotoService[] =>
+{
+    return servicesRepository.filter(photoService => !photoService.isMainService);
 }
